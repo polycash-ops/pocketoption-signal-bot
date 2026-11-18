@@ -7,14 +7,21 @@ USER SPEC (2026-11-18):
   - Heiken Ashi chart, 5-minute bars (M5)
   - BUY  when price (HA close) closes ABOVE EMA 20 AND the HA bar is green
   - SELL when price (HA close) closes BELOW EMA 20 AND the HA bar is red
+  - FIRST CLOSE ONLY (user update 2026-11-18 ~15:49 EST): the trade fires
+    only on the FIRST close that satisfies the condition — if the previous
+    closed bar already satisfied the same side, no new signal. All other
+    parameters unchanged (TP 5, SL 10, 20,000 units, M5, HA, demo).
   - TP 5 pips, SL 10 pips
   - Size: 20,000 units fixed = 0.20 lots
   - EUR/USD, DEMO account, MT5, automatic trading ON
 
 Signal is evaluated on the last CLOSED bar only (the forming bar is
-never traded). It fires on EVERY qualifying close while no position
-is open — so after a TP/SL exit it re-enters on the next qualifying
-close if conditions still hold. One position at a time.
+never traded). It fires ONLY on the FIRST close that satisfies the
+condition: BUY when this closed bar qualifies and the previous closed
+bar did not qualify for BUY; SELL likewise. While the condition
+persists across bars, no new signal fires — so after a TP/SL exit it
+does NOT re-enter until a fresh first close appears. One position
+at a time.
 
 WORKS WITH ANY MT5 BROKER: the bot talks to the MT5 terminal running
 on the Windows machine and trades whichever account is logged in there.
@@ -224,10 +231,12 @@ class EMA20MT5Bot:
         return lots, round(risk, 2)
 
     def generate_signal(self, rates: List[dict]) -> tuple:
-        """EMA20 Heiken Ashi signal on the last CLOSED bar.
+        """EMA20 Heiken Ashi signal on the last CLOSED bar — FIRST close only.
 
         BUY  when HA close > EMA20(HA close) AND HA bar green (close > open)
         SELL when HA close < EMA20(HA close) AND HA bar red   (close < open)
+        A side fires only when this closed bar qualifies AND the previous
+        closed bar did not qualify for the same side.
         Returns (signal, ema20, ha_close, ha_open) for logging.
         """
         if len(rates) < 50:
@@ -236,13 +245,20 @@ class EMA20MT5Bot:
         e20 = ema(ha_c, self.cfg.ema_period)
         # last closed bar is index -2 (index -1 is the forming bar)
         idx = len(ha_c) - 2
-        if e20[idx] is None:
+        if e20[idx] is None or e20[idx - 1] is None:
             return "NO_TRADE", None, None, None
-        above = ha_c[idx] > e20[idx]
-        green = ha_c[idx] > ha_o[idx]
-        if above and green:
+
+        def buy_at(j: int) -> bool:
+            return (e20[j] is not None and ha_c[j] > e20[j]
+                    and ha_c[j] > ha_o[j])
+
+        def sell_at(j: int) -> bool:
+            return (e20[j] is not None and ha_c[j] < e20[j]
+                    and ha_c[j] < ha_o[j])
+
+        if buy_at(idx) and not buy_at(idx - 1):
             return "BUY", e20[idx], ha_c[idx], ha_o[idx]
-        if (not above) and (not green):
+        if sell_at(idx) and not sell_at(idx - 1):
             return "SELL", e20[idx], ha_c[idx], ha_o[idx]
         return "NO_TRADE", e20[idx], ha_c[idx], ha_o[idx]
 
