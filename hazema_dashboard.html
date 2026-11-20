@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HAZEMA Heiken Ashi Research</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#131c30;--line:#263550;--muted:#94a3b8;--text:#e8eef8;--cyan:#67e8f9;--green:#4ade80;--red:#fb7185}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,sans-serif}header{padding:24px clamp(16px,4vw,48px);border-bottom:1px solid var(--line);background:#0e1729}h1{margin:0;font-size:clamp(22px,3vw,32px)}header p,.muted{color:var(--muted)}main{padding:24px clamp(16px,4vw,48px);max-width:1440px;margin:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.panel,.metric{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.metric small{color:var(--muted)}.metric strong{display:block;font-size:27px;margin-top:8px}.section{margin:22px 0 10px;font-size:18px}.pill{display:inline-block;padding:4px 9px;border-radius:99px;background:#263550;color:var(--cyan);font-size:12px}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.button{background:#164e63;color:#cffafe;border:1px solid #0e7490;padding:9px 13px;border-radius:9px;cursor:pointer}.button:disabled{opacity:.5;cursor:not-allowed}input{max-width:100%;color:var(--text)}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600}.scroll{overflow:auto}.good{color:var(--green)}.bad{color:var(--red)}.bar{height:9px;background:#263550;border-radius:9px;overflow:hidden}.bar span{display:block;height:100%;background:var(--cyan);width:0}#status{color:var(--muted);margin-left:8px}footer{color:var(--muted);font-size:12px;margin:22px 0}
+</style></head><body>
+<header><div class="row"><span class="pill">RESEARCH / READ ONLY</span><span class="pill">EURUSD · M1 · HAZEMA</span></div><h1>HAZEMA Heiken Ashi Dashboard</h1><p>Five-factor signal strength, two-month historical evaluation, and out-of-sample reporting. No orders are placed.</p></header>
+<main>
+<div class="panel"><div class="row"><div><b>Historical window</b><div class="muted">20 Sep 2026 – 19 Nov 2026 UTC · Dukascopy bid candles</div></div><div style="margin-left:auto" class="row"><label for="file">Load backtest JSON/CSV</label><input id="file" type="file" accept=".json,.csv"><button class="button" id="demo" disabled> </button></div></div><p id="status">Waiting for a completed backtest dataset. This panel will not fabricate metrics.</p></div>
+<h2 class="section">Performance</h2><div class="grid">
+<div class="metric"><small>Out-of-sample win rate</small><strong id="win">—</strong></div><div class="metric"><small>Out-of-sample signals</small><strong id="count">—</strong></div><div class="metric"><small>BUY accuracy</small><strong id="buy">—</strong></div><div class="metric"><small>SELL accuracy</small><strong id="sell">—</strong></div><div class="metric"><small>Net R (10 pip SL / 15 pip TP)</small><strong id="r">—</strong></div><div class="metric"><small>Max drawdown (R)</small><strong id="dd">—</strong></div></div>
+<h2 class="section">Five HAZEMA scoring factors</h2><div class="grid">
+<div class="panel"><b>HA streak</b><p class="muted">20 points for ≥3 same-colour bars; 15 for 2; otherwise 10.</p></div><div class="panel"><b>ZEMA momentum</b><p class="muted">20 points for a three-bar directional rise/fall; otherwise 10.</p></div><div class="panel"><b>Trend gap vs ATR</b><p class="muted">SMMA 11 vs EMA 89 separation, scaled by ATR(20).</p></div><div class="panel"><b>MACD 13/26/9</b><p class="muted">Direction relative to zero and three-bar momentum.</p></div><div class="panel"><b>Wick + body</b><p class="muted">No adverse wick and body greater than 0.3 × ATR.</p></div></div>
+<h2 class="section">Signal breakdown</h2><div class="panel scroll"><table><thead><tr><th>Metric</th><th>BUY</th><th>SELL</th><th>Total</th></tr></thead><tbody id="breakdown"><tr><td colspan="4" class="muted">No results loaded.</td></tr></tbody></table></div>
+<h2 class="section">Backtest integrity</h2><div class="panel"><div class="row"><span class="pill">Chronological split</span><span class="pill">Closed-candle only</span><span class="pill">No look-ahead</span><span class="pill">Costs disclosed</span></div><p class="muted">A 90% target is not assumed. The report must include the actual number of out-of-sample trades, payout/transaction-cost assumptions, missing-minute audit, and confidence interval. A two-month sample may be too small to establish durable accuracy.</p><div class="bar"><span id="coverage"></span></div><p id="audit" class="muted">Dataset audit pending.</p></div>
+<footer>Data source intended: Dukascopy EURUSD M1 bid history. This feed may differ from a broker’s quotes; bid-only OHLC cannot fully reproduce spread, ask-side entries, slippage, or execution.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function pct(x){return Number.isFinite(+x)?(+x*100).toFixed(2)+'%':'—'}
+function render(d){
+ const m=d.out_of_sample||d.metrics||d;
+ $('win').textContent=pct(m.win_rate);$('count').textContent=m.signals??m.count??'—';
+ $('buy').textContent=pct(m.buy_win_rate);$('sell').textContent=pct(m.sell_win_rate);
+ $('r').textContent=m.net_r??'—';$('dd').textContent=m.max_drawdown_r??'—';
+ const b=d.breakdown||m.breakdown;
+ if(b){$('breakdown').innerHTML=['signals','wins','losses','win_rate'].map(k=>'<tr><td>'+k.replaceAll('_',' ')+'</td><td>'+((b.buy||{})[k]??'—')+'</td><td>'+((b.sell||{})[k]??'—')+'</td><td>'+((b.total||{})[k]??'—')+'</td></tr>').join('')}
+ $('audit').textContent=d.audit?.summary||'Backtest loaded; inspect the accompanying audit fields before interpreting results.';
+ $('status').textContent='Loaded report '+(d.generated_at||'')+'. Verify source and date coverage before use.';
+}
+$('file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await f.text();let d;if(f.name.endsWith('.json'))d=JSON.parse(t);else{const rows=t.trim().split(/\r?\n/);d={signals:rows.slice(1).map(line=>{const a=line.split(',');return {timestamp:a[0],side:a[1],score:+a[2],outcome:a[3]}})}}render(d)}catch(err){$('status').textContent='Could not read report: '+err.message}});
+</script></body></html>
