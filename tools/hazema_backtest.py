@@ -73,7 +73,7 @@ def calc(rows):
         score+=(10 if right else 0)+(10 if moving else 0)
         no_wick=hal[j]>=hao[j]-1e-9 if side=='BUY' else hah[j]<=hao[j]+1e-9
         score+=(10 if no_wick else 0)+(10 if a>0 and abs(hac[j]-hao[j])>.3*a else 0)
-        entry=c[j];future=rows[j+1:j+16];outcome='OPEN';r_multiple=0
+        # The bot's configured minimum strength is 70/100; weaker signals are skipped.\n        if score < 70: continue\n        entry=c[j];future=rows[j+1:j+16];outcome='OPEN';r_multiple=0
         sl=entry-(.0010 if side=='BUY' else -.0010);tp=entry+(.0015 if side=='BUY' else -.0015)
         for bar in future:
             hit_sl=bar['low']<=sl if side=='BUY' else bar['high']>=sl
